@@ -32,10 +32,11 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi import APIRouter, Depends
+from fastapi.security.api_key import APIKey
 
 from pipecat.transports.services.helpers.daily_rest import DailyRESTHelper, DailyRoomParams
 
-
+from api_auth import validate_api_key
 # Load environment variables from .env file
 load_dotenv(override=True)
 
@@ -78,6 +79,7 @@ async def lifespan(app: FastAPI):
     await aiohttp_session.close()
     cleanup()
 
+router = APIRouter(dependencies=[Depends(validate_api_key)])
 # Initialize FastAPI app with lifespan manager
 app = FastAPI(lifespan=lifespan)
 
@@ -111,7 +113,7 @@ async def create_room_and_token() -> tuple[str, str]:
     return room.url, token
 
 @app.post("/connect")
-async def rtvi_connect(request: Request) -> Dict[Any, Any]:
+async def rtvi_connect(request: Request, api_key: APIKey = Depends(validate_api_key)) -> Dict[Any, Any]:
     """RTVI connect endpoint that creates a room and returns connection credentials.
 
     This endpoint is called by RTVI clients to establish a connection.
